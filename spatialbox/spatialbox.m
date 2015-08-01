@@ -27,6 +27,7 @@ if nargin == 0   % LAUNCH GUI
     
     handles.fig = fig;
     handles.previous_quantity = '-';
+    handles.user_property_string = 'user';
     
     orighandles = handles;          % backup for the later re-opening of the data
     guidata(handles.fig, handles);
@@ -406,10 +407,11 @@ else % if no ensemble, it might be u or uf
             case 1
                 % since we added handles.user_property, we want here also 
                 % to use this button to reset the user property
-                if isfield(handles,'user_property')
-                    handles = rmfield(handles,'user_property');
+                if ~strcmp(handles.user_property_string,'user')
+                    % handles = rmfield(handles,'user_property');
                     handles.inst_list = strrep(handles.inst_list,handles.user_property_string,'user');
-                    set (handles.popupmenu_quantity,'String',handles.inst_list);
+                    set(handles.popupmenu_quantity,'String',handles.inst_list);
+                    handles.user_property_string = 'user';
                 end
                 handles.property = [];
                 handles.colorbar_flag = 0;
@@ -481,20 +483,24 @@ else % if no ensemble, it might be u or uf
                 dvdx = handles.dvdx(:,:,handles.current);
                 dvdy = handles.dvdy(:,:,handles.current);
                 
-                if ~isfield(handles,'user_property') || isempty(handles.user_property)
+                if strcmp(handles.user_property_string,'user')
                     prompt = {'Enter your expression'};
                     dlg_title = 'Input';
                     num_lines = 1;
                     def = {'sqrt(u.^2 + v.^2)'};
                     answer = inputdlg(prompt,dlg_title,num_lines,def);
                     handles.user_property_string = answer{1};
-                    handles.user_property = eval(handles.user_property_string);
                     handles.inst_list = strrep(handles.inst_list,'user',handles.user_property_string);
                     set (handles.popupmenu_quantity,'String',handles.inst_list); 
                     % handles.inst_list = '-|u|v|(u^2+v^2)^(1/2)|vorticity|sxx=du/dx|du/dy|dv/dx|syy=dv/dy|du/dx+dv/dy|sxy|user';
                 end
-                                
-                handles.property = handles.user_property;
+                
+                if strcmp(handles.user_property_string,'user')
+                    handles.property = [];
+                else
+                    handles.property = eval(handles.user_property_string);
+                end
+                
                 handles.units = '[]';
         end
     end
