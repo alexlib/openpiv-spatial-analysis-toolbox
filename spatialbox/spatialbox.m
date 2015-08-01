@@ -20,10 +20,10 @@ if nargin == 0   % LAUNCH GUI
     handles = guihandles(fig);
     
     % Global several long strings
-    handles.inst_list = '-|u|v|(u^2+v^2)^(1/2)|vorticity|sxx=du/dx|du/dy|dv/dx|syy=dv/dy|du/dx+dv/dy|sxy';
-    handles.mean_list = '-|U|V|(U^2+V^2)^(1/2)|Vorticity|Sxx=dU/dx|dU/dy|dV/dx|Syy=dV/dy|dU/dx+dV/dy|Sxy';
-    handles.fluct_list = '-|u''|v''|(u''^2+v''^2)^(1/2)|Vorticity''|sxx''=du''/dx|du''/dy|dv''/dx|syy''=dv''/dy|du''/dx+dv''/dy|sxy''';
-    handles.fluct_mean_list = '-|u rms|v rms|Reynolds stress|Turb. intensity (u) |Turb. intensity (v)|Dissipation|Turb. Energy Production|TKE|Enstropy';
+    handles.inst_list = '-|u|v|(u^2+v^2)^(1/2)|vorticity|sxx=du/dx|du/dy|dv/dx|syy=dv/dy|du/dx+dv/dy|sxy|user';
+    handles.mean_list = '-|U|V|(U^2+V^2)^(1/2)|Vorticity|Sxx=dU/dx|dU/dy|dV/dx|Syy=dV/dy|dU/dx+dV/dy|Sxy|user';
+    handles.fluct_list = '-|u''|v''|(u''^2+v''^2)^(1/2)|Vorticity''|sxx''=du''/dx|du''/dy|dv''/dx|syy''=dv''/dy|du''/dx+dv''/dy|sxy|user''';
+    handles.fluct_mean_list = '-|u rms|v rms|Reynolds stress|Turb. intensity (u) |Turb. intensity (v)|Dissipation|Turb. Energy Production|TKE|Enstropy|user';
     
     handles.fig = fig;
     handles.previous_quantity = '-';
@@ -246,6 +246,9 @@ if get(handles.checkbox_ensemble,'Value') == 1
                     handles.enst = handles.enst/handles.N;
                     handles.property = handles.enst;
                 end
+            case 11 % user provided property
+                handles.property = handles.user_property;
+                handles.units = '[]';
                 
         end % of switch
         % ------------------------------------------- Ensemble ------
@@ -315,6 +318,9 @@ if get(handles.checkbox_ensemble,'Value') == 1
                     handles.units = '[1/\Delta t]';
                 end
                 handles.property = 0.5*(handles.dvdx(:,:,handles.current) + handles.dudy(:,:,handles.current));
+             case 12 % user provided property
+                handles.property = handles.user_property;
+                handles.units = '[]';
         end
     end % if fluct, else
 else % if no ensemble, it might be u or uf
@@ -398,6 +404,13 @@ else % if no ensemble, it might be u or uf
     else % fluct, means nothing is selected, u values
         switch get(handles.popupmenu_quantity,'Value')
             case 1
+                % since we added handles.user_property, we want here also 
+                % to use this button to reset the user property
+                if isfield(handles,'user_property')
+                    handles = rmfield(handles,'user_property');
+                    handles.inst_list = strrep(handles.inst_list,handles.user_property_string,'user');
+                    set (handles.popupmenu_quantity,'String',handles.inst_list);
+                end
                 handles.property = [];
                 handles.colorbar_flag = 0;
                 
@@ -459,6 +472,30 @@ else % if no ensemble, it might be u or uf
                     handles.units = '[1/\Delta t]';
                 end
                 handles.property = 0.5*(handles.dvdx(:,:,handles.current) + handles.dudy(:,:,handles.current));
+             case 12 % user provided property
+                 
+                u = handles.u(:,:,handles.current);
+                v = handles.v(:,:,handles.current);
+                dudx = handles.dudx(:,:,handles.current);
+                dudy = handles.dudy(:,:,handles.current);
+                dvdx = handles.dvdx(:,:,handles.current);
+                dvdy = handles.dvdy(:,:,handles.current);
+                
+                if ~isfield(handles,'user_property') || isempty(handles.user_property)
+                    prompt = {'Enter your expression'};
+                    dlg_title = 'Input';
+                    num_lines = 1;
+                    def = {'sqrt(u.^2 + v.^2)'};
+                    answer = inputdlg(prompt,dlg_title,num_lines,def);
+                    handles.user_property_string = answer{1};
+                    handles.user_property = eval(handles.user_property_string);
+                    handles.inst_list = strrep(handles.inst_list,'user',handles.user_property_string);
+                    set (handles.popupmenu_quantity,'String',handles.inst_list); 
+                    % handles.inst_list = '-|u|v|(u^2+v^2)^(1/2)|vorticity|sxx=du/dx|du/dy|dv/dx|syy=dv/dy|du/dx+dv/dy|sxy|user';
+                end
+                                
+                handles.property = handles.user_property;
+                handles.units = '[]';
         end
     end
 end
@@ -3074,3 +3111,16 @@ else
 end;
 
 guidata(handles.fig,handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu_quantity_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to popupmenu_quantity (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
